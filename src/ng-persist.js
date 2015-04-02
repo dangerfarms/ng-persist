@@ -71,6 +71,6 @@
         };
     };
 
-    angular.module('ng-cordova-persist').factory('$persist', $persist);
+    angular.module('ng-persist').factory('$persist', $persist);
 
 }());
