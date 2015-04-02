@@ -9,7 +9,7 @@
 $ bower install ng-persist ngstorage --save
 ```
 
-For ios, [KeychainPlugin](https://github.com/danwilson/google-analytics-plugin) is required:
+For ios, [KeychainPlugin](https://github.com/shazron/KeychainPlugin) is required:
 
 ```
 $ cordova plugin add https://github.com/shazron/KeychainPlugin.git
