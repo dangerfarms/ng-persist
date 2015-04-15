@@ -24,7 +24,7 @@ Require ng-cordova and ngstorage
 ```js
 angular.module('myApp', [
     'ngStorage',
-    'ng-cordova'
+    'ng-persist'
 ]);
 ```
 
