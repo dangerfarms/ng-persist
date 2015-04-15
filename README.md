@@ -19,7 +19,7 @@ Android support is coming soon.
 
 ## Usage
 
-Require ng-cordova and ngstorage
+Require ng-persist and ngstorage
 
 ```js
 angular.module('myApp', [
