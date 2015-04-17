@@ -73,7 +73,7 @@
                                 deferred.reject(new Error('error saving to keychain'));
                             }, key, namespace, val);
                     } else if (isAndroid) {
-                        writeToFile('activebuilding', 'sometest', 'this is my value')
+                        writeToFile(namespace, key, val)
                             .then(() => {
                                 deferred.resolve();
                             })
@@ -107,7 +107,7 @@
                             }, key, namespace);
                     } else {
                         if (isAndroid) {
-                            readFromFile('activebuilding', 'sometest')
+                            readFromFile(namespace, key)
                                 .then((val) => {
                                     deferred.resolve(val);
                                     console.log('AAA :: file read : ' + val);
