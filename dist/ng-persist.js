@@ -1,5 +1,9 @@
 "use strict";
 
+var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
 (function () {
 
     "use strict";
@@ -7,6 +11,183 @@
     angular.module("ng-persist", []);
 
     var $persist = function ($q, $localStorage) {
+
+        var isBrowser = false;
+        var isIos = false;
+        var isAndroid = false;
+
+        if (!window.cordova && !window.device && !window.Keychain) {
+            isBrowser = true;
+        } else {
+            isAndroid = window.device.platform === "Android";
+            isIos = window.device.platform === "iOS";
+        }
+
+        var LocalStorageAdapter = (function () {
+            function LocalStorageAdapter() {
+                _classCallCheck(this, LocalStorageAdapter);
+            }
+
+            _createClass(LocalStorageAdapter, {
+                read: {
+                    value: function read(namespace, key) {
+                        var deferred = $q.defer();
+                        var val = $localStorage["" + namespace + "_" + key];
+                        deferred.resolve(val);
+                        return deferred.promise;
+                    }
+                },
+                write: {
+                    value: function write(namespace, key, val) {
+                        var deferred = $q.defer();
+                        $localStorage["" + namespace + "_" + key] = val;
+                        deferred.resolve();
+                        return deferred.promise;
+                    }
+                },
+                remove: {
+                    value: function remove(namespace, key) {
+                        var deferred = $q.defer();
+                        delete $localStorage["" + namespace + "_" + key];
+                        deferred.resolve();
+                        return deferred.promise;
+                    }
+                }
+            });
+
+            return LocalStorageAdapter;
+        })();
+
+        var IosKeychainAdapter = (function () {
+            function IosKeychainAdapter() {
+                _classCallCheck(this, IosKeychainAdapter);
+            }
+
+            _createClass(IosKeychainAdapter, {
+                read: {
+                    value: function read(namespace, key) {
+                        var deferred = $q.defer();
+                        var kc = new window.Keychain();
+                        kc.getForKey(function (val) {
+                            deferred.resolve(val);
+                        }, function (err) {
+                            deferred.reject(err);
+                        }, key, namespace);
+                        return deferred.promise;
+                    }
+                },
+                write: {
+                    value: function write(namespace, key, val) {
+                        var deferred = $q.defer();
+                        var kc = new window.Keychain();
+                        kc.setForKey(function () {
+                            deferred.resolve();
+                        }, function (err) {
+                            deferred.reject(err);
+                        }, key, namespace, val);
+                        return deferred.promise;
+                    }
+                },
+                remove: {
+                    value: function remove(namespace, key) {
+                        var deferred = $q.defer();
+                        var kc = new window.Keychain();
+                        kc.removeForKey(function () {
+                            deferred.resolve();
+                        }, function (err) {
+                            deferred.reject(err);
+                        }, key, namespace);
+                        return deferred.promise;
+                    }
+                }
+            });
+
+            return IosKeychainAdapter;
+        })();
+
+        var AndroidExternalStorageAdapter = (function () {
+            function AndroidExternalStorageAdapter() {
+                _classCallCheck(this, AndroidExternalStorageAdapter);
+            }
+
+            _createClass(AndroidExternalStorageAdapter, {
+                read: {
+                    value: function read(namespace, key) {
+                        var deferred = $q.defer();
+                        var filename = "" + namespace + "_" + key;
+                        window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory + filename, function (fileEntry) {
+                            fileEntry.file(function (file) {
+                                var reader = new FileReader();
+                                reader.onloadend = function (evt) {
+                                    deferred.resolve(evt.target.result);
+                                };
+                                reader.readAsText(file);
+                            });
+                        }, function (err) {
+                            deferred.reject(err);
+                        });
+                        return deferred.promise;
+                    }
+                },
+                write: {
+                    value: function write(namespace, key, val) {
+                        var deferred = $q.defer();
+                        window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, function (dir) {
+                            var filename = "" + namespace + "_" + key;
+                            dir.getFile(filename, { create: true }, function (file) {
+                                if (!file) {
+                                    deferred.reject();
+                                }
+                                file.createWriter(function (fileWriter) {
+                                    // fileWriter.seek(fileWriter.length);
+                                    var blob = new Blob([val], { type: "text/plain" });
+                                    fileWriter.write(blob);
+                                    deferred.resolve();
+                                }, function (err) {
+                                    deferred.reject(err);
+                                });
+                            });
+                        });
+                        return deferred.promise;
+                    }
+                },
+                remove: {
+                    value: function remove(namespace, key) {
+                        var deferred = $q.defer();
+                        window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, function (dir) {
+                            var filename = "" + namespace + "_" + key;
+                            dir.getFile(filename, { create: true }, function (file) {
+                                if (!file) {
+                                    deferred.reject();
+                                }
+                                file.createWriter(function (fileWriter) {
+                                    // fileWriter.seek(fileWriter.length);
+                                    var blob = new Blob([""], { type: "text/plain" });
+                                    fileWriter.write(blob);
+                                    deferred.resolve();
+                                }, function (err) {
+                                    deferred.reject(err);
+                                });
+                            });
+                        });
+                        return deferred.promise;
+                    }
+                }
+            });
+
+            return AndroidExternalStorageAdapter;
+        })();
+
+        var getAdapter = function () {
+            if (isBrowser) {
+                return new LocalStorageAdapter();
+            } else if (isIos) {
+                return new IosKeychainAdapter();
+            } else if (isAndroid) {
+                return new AndroidExternalStorageAdapter();
+            }
+        };
+
         return {
             set: function set() {
                 var namespace = arguments[0] === undefined ? "" : arguments[0];
@@ -14,21 +195,19 @@
                 var val = arguments[2] === undefined ? "" : arguments[2];
 
                 var deferred = $q.defer();
-                if (!key) {
-                    deferred.reject(new Error("must specify a key"));
-                } else {
-                    if (window.cordova && window.Keychain) {
-                        var kc = new window.Keychain();
-                        kc.setForKey(function () {
-                            deferred.resolve();
-                        }, function (err) {
-                            deferred.reject(new Error("error saving to keychain"));
-                        }, key, namespace, val);
+                var adapter = getAdapter();
+                adapter.write(namespace, key, val).then(function () {
+                    deferred.resolve(val);
+                })["catch"](function (err) {
+                    // if not browser, write to local storage
+                    // otherwise reject
+                    if (!isBrowser) {
+                        var localStorageAdapter = new LocalStorageAdapter();
+                        return localStorageAdapter.write(namespace, key, val);
                     } else {
-                        $localStorage["" + namespace + "_" + key] = val;
-                        deferred.resolve();
+                        deferred.reject(err);
                     }
-                }
+                });
                 return deferred.promise;
             },
             get: function get() {
@@ -37,46 +216,22 @@
                 var fallback = arguments[2] === undefined ? "" : arguments[2];
 
                 var deferred = $q.defer();
-                var val = "";
-                if (!key) {
-                    deferred.reject();
-                } else {
-                    if (window.cordova && window.Keychain) {
-                        var kc = new window.Keychain();
-                        kc.getForKey(function (val) {
-                            deferred.resolve(val);
-                        }, function (err) {
-                            deferred.resolve(fallback);
-                        }, key, namespace);
+                var adapter = getAdapter();
+                adapter.read(namespace, key).then(function (val) {
+                    if (val) {
+                        deferred.resolve(val);
                     } else {
-                        val = $localStorage["" + namespace + "_" + key];
-                        if (val) {
-                            deferred.resolve(val);
-                        } else {
-                            deferred.resolve(fallback);
-                        }
+                        deferred.resolve(fallback);
                     }
-                }
+                })["catch"](function () {
+                    // always resolve with the fallback value
+                    deferred.resolve(fallback);
+                });
                 return deferred.promise;
             },
             remove: function remove(namespace, key) {
-                var deferred = $q.defer();
-                if (!key || !namespace) {
-                    deferred.reject();
-                } else {
-                    if (window.cordova && window.Keychain) {
-                        var kc = new window.Keychain();
-                        kc.removeForKey(function () {
-                            deferred.reject();
-                        }, function () {
-                            deferred.reject();
-                        }, key, namespace);
-                    } else {
-                        delete $localStorage["" + namespace + "_" + key];
-                        deferred.resolve();
-                    }
-                }
-                return deferred.promise;
+                var adapter = getAdapter();
+                return adapter.remove(namespace, key);
             } };
     };
 
