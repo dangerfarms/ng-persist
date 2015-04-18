@@ -5,9 +5,11 @@
     angular.module('ng-persist', []);
 
     const $persist = ($q, $localStorage) => {
+
         let isBrowser = false;
         let isIos     = false;
         let isAndroid = false;
+
         if (!window.cordova && !window.device && !window.Keychain) {
             isBrowser = true;
         } else {
@@ -15,136 +17,171 @@
             isIos     = (window.device.platform === 'iOS');
         }
 
-        const writeToFile = (namespace, key, val) => {
-            var deferred = $q.defer();
-            window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, (dir) => {
-                const filename = namespace + '.' + key + '.txt';
-                dir.getFile(filename, { create : true }, (file) => {
-                    if(!file) {
-                        deferred.reject();
-                    }
-                    file.createWriter((fileWriter) => {
-                        fileWriter.seek(fileWriter.length);
-                        var blob = new Blob([val], {type:'text/plain'});
-                        fileWriter.write(blob);
+        class LocalStorageAdapter {
+            read(namespace, key) {
+                const deferred = $q.defer();
+                const val = $localStorage[`${namespace}_${key}`];
+                deferred.resolve(val);
+                return deferred.promise;
+            }
+            write(namespace, key, val) {
+                const deferred = $q.defer();
+                $localStorage[`${namespace}_${key}`] = val;
+                deferred.resolve();
+                return deferred.promise;
+            }
+            remove(namespace, key) {
+                const deferred = $q.defer();
+                delete $localStorage[`${namespace}_${key}`];
+                deferred.resolve();
+                return deferred.promise;
+            }
+        }
+
+        class IosKeychainAdapter {
+            read(namespace, key) {
+                const deferred = $q.defer();
+                const kc = new window.Keychain();
+                kc.getForKey((val) => {
+                        deferred.resolve(val);
+                    }, (err) => {
+                        deferred.reject(err);
+                    }, key, namespace);
+                return deferred.promise;
+            }
+            write(namespace, key, val) {
+                const deferred = $q.defer();
+                const kc = new window.Keychain();
+                kc.setForKey(() => {
+                    deferred.resolve();
+                }, (err) => {
+                    deferred.reject(err);
+                }, key, namespace, val);
+                return deferred.promise;
+            }
+            remove(namespace, key) {
+                const deferred = $q.defer();
+                const kc = new window.Keychain();
+                kc.removeForKey(() => {
                         deferred.resolve();
                     }, (err) => {
-                        console.log(err);
-                        deferred.reject();
+                        deferred.reject(err);
+                    }, key, namespace);
+                return deferred.promise;
+            }
+        }
+
+        class AndroidExternalStorageAdapter {
+            read(namespace, key) {
+                const deferred = $q.defer();
+                const filename = `${namespace}_${key}`;
+                window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory + filename, (fileEntry) => {
+                    fileEntry.file((file) => {
+                        const reader = new FileReader();
+                        reader.onloadend = (evt) => {
+                            deferred.resolve(evt.target.result);
+                        };
+                        reader.readAsText(file);
+                    });
+                }, (err) => {
+                    deferred.reject(err);
+                });
+                return deferred.promise;
+            }
+            write(namespace, key, val) {
+                const deferred = $q.defer();
+                window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, (dir) => {
+                    const filename = `${namespace}_${key}`;
+                    dir.getFile(filename, { create : true }, (file) => {
+                        if (!file) {
+                            deferred.reject();
+                        }
+                        file.createWriter((fileWriter) => {
+                            // fileWriter.seek(fileWriter.length);
+                            const blob = new Blob([val], { type:'text/plain' });
+                            fileWriter.write(blob);
+                            deferred.resolve();
+                        }, (err) => {
+                            deferred.reject(err);
+                        });
                     });
                 });
-            });
-            return deferred.promise;
-        };
-
-        const readFromFile = (namespace, key) => {
-            var deferred = $q.defer();
-            const filename = namespace + '.' + key + '.txt';
-            window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory + filename, (fileEntry) => {
-                fileEntry.file((file) => {
-                    var reader = new FileReader();
-                    reader.onloadend = (evt) => {
-                        deferred.resolve(evt.target.result);
-                    };
-                    reader.readAsText(file);
+                return deferred.promise;
+            }
+            remove(namespace, key) {
+                const deferred = $q.defer();
+                window.resolveLocalFileSystemURL(cordova.file.externalRootDirectory, (dir) => {
+                    const filename = `${namespace}_${key}`;
+                    dir.getFile(filename, { create : true }, (file) => {
+                        if (!file) {
+                            deferred.reject();
+                        }
+                        file.createWriter((fileWriter) => {
+                            // fileWriter.seek(fileWriter.length);
+                            const blob = new Blob([''], { type:'text/plain' });
+                            fileWriter.write(blob);
+                            deferred.resolve();
+                        }, (err) => {
+                            deferred.reject(err);
+                        });
+                    });
                 });
-            }, (err) => {
-                console.log(err);
-                deferred.reject();
-            });
-            return deferred.promise;
+                return deferred.promise;
+            }
+        }
+
+        const getAdapter = () => {
+            if (isBrowser) {
+                return new LocalStorageAdapter();
+            } else if (isIos) {
+                return new IosKeychainAdapter();
+            } else if (isAndroid) {
+                return new AndroidExternalStorageAdapter();
+            }
         };
 
         return {
             set(namespace = '', key = null, val = '') {
-                const saveToLocalStorage = () => {
-                    $localStorage[`${namespace}_${key}`] = val;
-                };
-                var deferred = $q.defer();
-                if (!key) {
-                    deferred.reject(new Error('must specify a key'));
-                } else {
-                    if (isIos) {
-                        var kc = new window.Keychain();
-                        kc.setForKey(() => {
-                                deferred.resolve();
-                            }, (err) => {
-                                console.log(err);
-                                deferred.reject(new Error('error saving to keychain'));
-                            }, key, namespace, val);
-                    } else if (isAndroid) {
-                        writeToFile(namespace, key, val)
-                            .then(() => {
-                                deferred.resolve();
-                            })
-                            .catch(() => {
-                                saveToLocalStorage();
-                                deferred.resolve();
-                            });
-                    } else {
-                        saveToLocalStorage();
-                        deferred.resolve();
-                    }
-                }
+                const deferred = $q.defer();
+                const adapter = getAdapter();
+                adapter
+                    .write(namespace, key, val)
+                    .then(() => {
+                        deferred.resolve(val);
+                    })
+                    .catch((err) => {
+                        // if not browser, write to local storage
+                        // otherwise reject
+                        if (!isBrowser) {
+                            const localStorageAdapter = new LocalStorageAdapter();
+                            return localStorageAdapter.write(namespace, key, val);
+                        } else {
+                            deferred.reject(err);
+                        }
+                    });
                 return deferred.promise;
             },
             get(namespace = '', key = null, fallback = '') {
-                var deferred = $q.defer();
-                let val = '';
-                const getFromLocalStorage = () => {
-                    return $localStorage[`${namespace}_${key}`];
-                };
-                if (!key) {
-                    deferred.reject();
-                } else {
-                    if (isIos) {
-                        var kc = new window.Keychain();
-                        kc.getForKey((val) => {
-                                deferred.resolve(val);
-                            }, (err) => {
-                                console.log(err);
-                                deferred.resolve(fallback);
-                            }, key, namespace);
-                    } else {
-                        if (isAndroid) {
-                            readFromFile(namespace, key)
-                                .then((val) => {
-                                    deferred.resolve(val);
-                                    console.log('AAA :: file read : ' + val);
-                                })
-                                .catch(() => {
-                                    val = getFromLocalStorage();
-                                });
-                        } else {
-                            val = getFromLocalStorage();
-                        }
+                const deferred = $q.defer();
+                const adapter = getAdapter();
+                adapter
+                    .read(namespace, key)
+                    .then((val) => {
                         if (val) {
                             deferred.resolve(val);
                         } else {
                             deferred.resolve(fallback);
                         }
-                    }
-                }
+                    })
+                    .catch(() => {
+                        // always resolve with the fallback value
+                        deferred.resolve(fallback);
+                    });
                 return deferred.promise;
             },
             remove(namespace, key) {
-                var deferred = $q.defer();
-                if (!key || !namespace) {
-                    deferred.reject();
-                } else {
-                    if (isIos) {
-                        var kc = new window.Keychain();
-                        kc.removeForKey(() => {
-                                deferred.reject();
-                            }, () => {
-                                deferred.reject();
-                            }, key, namespace);
-                    } else {
-                        delete $localStorage[`${namespace}_${key}`];
-                        deferred.resolve();
-                    }
-                }
-                return deferred.promise;
+                const adapter = getAdapter();
+                return adapter.remove(namespace, key);
             },
         };
     };
