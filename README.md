@@ -18,7 +18,7 @@ $ cordova plugin add https://github.com/shazron/KeychainPlugin.git
 For Android, [cordova-plugin-file](https://github.com/apache/cordova-plugin-file) is required:
 
 ```
-$ cordova plugin add https://git-wip-us.apache.org/repos/asf/cordova-plugin-file.git
+$ cordova plugin add cordova-plugin-file
 ```
 
 ## Usage
