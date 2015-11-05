@@ -43,6 +43,11 @@
                 const deferred = $q.defer();
                 const kc = new window.Keychain();
                 kc.getForKey((val) => {
+                        if (val !== "") {
+                            val = JSON.parse(val)
+                        } else {
+                            val = null;
+                        }
                         deferred.resolve(val);
                     }, (err) => {
                         deferred.reject(err);
@@ -52,6 +57,7 @@
             write(namespace, key, val) {
                 const deferred = $q.defer();
                 const kc = new window.Keychain();
+                val = JSON.stringify(val);
                 kc.setForKey(() => {
                     deferred.resolve();
                 }, (err) => {
@@ -79,7 +85,13 @@
                     fileEntry.file((file) => {
                         const reader = new FileReader();
                         reader.onloadend = (evt) => {
-                            deferred.resolve(evt.target.result);
+                            var res = evt.target.result;
+                            if (res !== "") {
+                                res = JSON.parse(res)
+                            } else {
+                                res = null;
+                            }
+                            deferred.resolve(res);
                         };
                         reader.readAsText(file);
                     });
@@ -98,7 +110,7 @@
                         }
                         file.createWriter((fileWriter) => {
                             // fileWriter.seek(fileWriter.length);
-                            const blob = new Blob([val], { type:'text/plain' });
+                            const blob = new Blob([JSON.stringify(val)], { type:'text/plain' });
                             fileWriter.write(blob);
                             deferred.resolve();
                         }, (err) => {

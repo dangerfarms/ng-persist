@@ -69,6 +69,11 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                         var deferred = $q.defer();
                         var kc = new window.Keychain();
                         kc.getForKey(function (val) {
+                            if (val !== "") {
+                                val = JSON.parse(val);
+                            } else {
+                                val = null;
+                            }
                             deferred.resolve(val);
                         }, function (err) {
                             deferred.reject(err);
@@ -80,6 +85,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                     value: function write(namespace, key, val) {
                         var deferred = $q.defer();
                         var kc = new window.Keychain();
+                        val = JSON.stringify(val);
                         kc.setForKey(function () {
                             deferred.resolve();
                         }, function (err) {
@@ -119,7 +125,13 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                             fileEntry.file(function (file) {
                                 var reader = new FileReader();
                                 reader.onloadend = function (evt) {
-                                    deferred.resolve(evt.target.result);
+                                    var res = evt.target.result;
+                                    if (res !== "") {
+                                        res = JSON.parse(res);
+                                    } else {
+                                        res = null;
+                                    }
+                                    deferred.resolve(res);
                                 };
                                 reader.readAsText(file);
                             });
@@ -140,7 +152,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                                 }
                                 file.createWriter(function (fileWriter) {
                                     // fileWriter.seek(fileWriter.length);
-                                    var blob = new Blob([val], { type: "text/plain" });
+                                    var blob = new Blob([JSON.stringify(val)], { type: "text/plain" });
                                     fileWriter.write(blob);
                                     deferred.resolve();
                                 }, function (err) {
