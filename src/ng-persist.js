@@ -197,7 +197,7 @@
             },
         };
     };
-
+    $persist.$inject = ['$q', '$localStorage'];
     angular.module('ng-persist').factory('$persist', $persist);
 
 }());
