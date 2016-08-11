@@ -10,7 +10,7 @@
         let isIos     = false;
         let isAndroid = false;
 
-        if (!window.cordova && !window.device && !window.Keychain) {
+        if (!window.cordova && !window.device && !Keychain) {
             isBrowser = true;
         } else {
             isAndroid = (window.device.platform === 'Android');
@@ -41,7 +41,7 @@
         class IosKeychainAdapter {
             read(namespace, key) {
                 const deferred = $q.defer();
-                const kc = new window.Keychain();
+                const kc = new Keychain();
                 kc.getForKey((val) => {
                         if (val !== "") {
                             val = JSON.parse(val)
@@ -56,7 +56,7 @@
             }
             write(namespace, key, val) {
                 const deferred = $q.defer();
-                const kc = new window.Keychain();
+                const kc = new Keychain();
                 val = JSON.stringify(val);
                 kc.setForKey(() => {
                     deferred.resolve();
@@ -67,7 +67,7 @@
             }
             remove(namespace, key) {
                 const deferred = $q.defer();
-                const kc = new window.Keychain();
+                const kc = new Keychain();
                 kc.removeForKey(() => {
                         deferred.resolve();
                     }, (err) => {

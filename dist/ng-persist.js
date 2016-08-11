@@ -16,7 +16,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
         var isIos = false;
         var isAndroid = false;
 
-        if (!window.cordova && !window.device && !window.Keychain) {
+        if (!window.cordova && !window.device && !Keychain) {
             isBrowser = true;
         } else {
             isAndroid = window.device.platform === "Android";
@@ -67,7 +67,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                 read: {
                     value: function read(namespace, key) {
                         var deferred = $q.defer();
-                        var kc = new window.Keychain();
+                        var kc = new Keychain();
                         kc.getForKey(function (val) {
                             if (val !== "") {
                                 val = JSON.parse(val);
@@ -84,7 +84,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                 write: {
                     value: function write(namespace, key, val) {
                         var deferred = $q.defer();
-                        var kc = new window.Keychain();
+                        var kc = new Keychain();
                         val = JSON.stringify(val);
                         kc.setForKey(function () {
                             deferred.resolve();
@@ -97,7 +97,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                 remove: {
                     value: function remove(namespace, key) {
                         var deferred = $q.defer();
-                        var kc = new window.Keychain();
+                        var kc = new Keychain();
                         kc.removeForKey(function () {
                             deferred.resolve();
                         }, function (err) {
