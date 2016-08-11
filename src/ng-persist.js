@@ -41,8 +41,7 @@
         class IosKeychainAdapter {
             read(namespace, key) {
                 const deferred = $q.defer();
-                const kc = new Keychain();
-                kc.getForKey((val) => {
+                Keychain.get((val) => {
                         if (val !== "") {
                             val = JSON.parse(val)
                         } else {
@@ -51,28 +50,26 @@
                         deferred.resolve(val);
                     }, (err) => {
                         deferred.reject(err);
-                    }, key, namespace);
+                    }, key, '');
                 return deferred.promise;
             }
             write(namespace, key, val) {
                 const deferred = $q.defer();
-                const kc = new Keychain();
                 val = JSON.stringify(val);
-                kc.setForKey(() => {
+                Keychain.set(() => {
                     deferred.resolve();
                 }, (err) => {
                     deferred.reject(err);
-                }, key, namespace, val);
+                }, key, val, false);
                 return deferred.promise;
             }
             remove(namespace, key) {
                 const deferred = $q.defer();
-                const kc = new Keychain();
-                kc.removeForKey(() => {
+                Keychain.remove(() => {
                         deferred.resolve();
                     }, (err) => {
                         deferred.reject(err);
-                    }, key, namespace);
+                    }, key);
                 return deferred.promise;
             }
         }

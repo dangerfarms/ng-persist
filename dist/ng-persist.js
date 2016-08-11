@@ -67,8 +67,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                 read: {
                     value: function read(namespace, key) {
                         var deferred = $q.defer();
-                        var kc = new Keychain();
-                        kc.getForKey(function (val) {
+                        Keychain.get(function (val) {
                             if (val !== "") {
                                 val = JSON.parse(val);
                             } else {
@@ -77,32 +76,30 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
                             deferred.resolve(val);
                         }, function (err) {
                             deferred.reject(err);
-                        }, key, namespace);
+                        }, key, '');
                         return deferred.promise;
                     }
                 },
                 write: {
                     value: function write(namespace, key, val) {
                         var deferred = $q.defer();
-                        var kc = new Keychain();
                         val = JSON.stringify(val);
-                        kc.setForKey(function () {
+                        Keychain.set(function () {
                             deferred.resolve();
                         }, function (err) {
                             deferred.reject(err);
-                        }, key, namespace, val);
+                        }, key, val, false);
                         return deferred.promise;
                     }
                 },
                 remove: {
                     value: function remove(namespace, key) {
                         var deferred = $q.defer();
-                        var kc = new Keychain();
-                        kc.removeForKey(function () {
+                        Keychain.remove(function () {
                             deferred.resolve();
                         }, function (err) {
                             deferred.reject(err);
-                        }, key, namespace);
+                        }, key);
                         return deferred.promise;
                     }
                 }
