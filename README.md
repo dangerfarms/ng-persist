@@ -9,10 +9,10 @@
 $ bower install ng-persist ngstorage --save
 ```
 
-For ios, [KeychainPlugin](https://github.com/shazron/KeychainPlugin) is required:
+For ios, [KeychainPlugin](https://github.com/driftyco/cordova-plugin-ios-keychain) is required:
 
 ```
-$ cordova plugin add https://github.com/shazron/KeychainPlugin.git
+$ cordova plugin add https://github.com/driftyco/cordova-plugin-ios-keychain.git
 ```
 
 For Android, [cordova-plugin-file](https://github.com/apache/cordova-plugin-file) is required:
